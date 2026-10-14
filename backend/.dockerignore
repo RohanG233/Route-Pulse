@@ -1,0 +1,37 @@
+# Files excluded from the backend Docker build context
+
+# Python artefacts
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Dev/test dependencies (not needed in the image)
+requirements-dev.txt
+
+# Test files and outputs
+app/tests/
+pytest.ini
+run_tests.py
+smoke_test.py
+test_results.txt
+test_output.txt
+test_err.txt
+
+# Regeneratable dataset — built at container startup
+app/data/generated/
+
+# Secrets / env
+.env
+.env.*
+
+# Docs (not needed in the image)
+../docs/
+../README.md

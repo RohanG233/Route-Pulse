@@ -1,0 +1,6 @@
+# This directory holds generated CSV/JSON files created by:
+#   cd backend && python -m app.data.generate_dataset
+#
+# The files themselves are git-ignored (they are deterministically regeneratable).
+# This .gitkeep ensures the directory exists after a fresh clone so the server
+# can start without a manual directory-creation step.

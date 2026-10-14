@@ -1,0 +1,68 @@
+version: "3.9"
+
+# RoutePulse — single-command local deployment
+#
+# Usage:
+#   docker compose up --build          # build and start both services
+#   docker compose up --build backend  # backend only
+#   docker compose down                # stop and remove containers
+#
+# Environment:
+#   Copy backend/.env.example  → backend/.env  and fill in production values.
+#   Copy frontend/.env.example → frontend/.env for frontend overrides.
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Backend — FastAPI + uvicorn
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: routepulse-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env.example   # safe defaults; override with ./backend/.env
+    environment:
+      # These override .env.example values when running via docker-compose.
+      HOST: "0.0.0.0"
+      PORT: "8000"
+      LOG_LEVEL: "info"
+      # Allow requests from the Nginx frontend container and localhost
+      CORS_ORIGINS: "http://localhost,http://localhost:80,http://frontend"
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist the generated dataset across container restarts
+      - routepulse-data:/app/app/data/generated
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # ---------------------------------------------------------------------------
+  # Frontend — Nginx serving the Vite build
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Point to the backend via the Nginx proxy path (/api/) so the
+        # browser never needs to know the backend's host directly.
+        VITE_API_URL: "/api"
+    container_name: routepulse-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  routepulse-data:
+    driver: local

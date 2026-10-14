@@ -1,0 +1,67 @@
+## render.yaml — Render Blueprint
+##
+## This file tells Render how to build and run both services.
+## Commit this file to the root of your repository, then on Render:
+##   New → Blueprint → connect your repo → Render reads this file.
+##
+## Render docs: https://render.com/docs/blueprint-spec
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Backend — Python / FastAPI
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: routepulse-backend
+    runtime: python
+    rootDir: backend          # Render runs everything from this subdirectory
+
+    buildCommand: pip install -r requirements.txt && python -m app.data.generate_dataset
+
+    # Render sets $PORT automatically. uvicorn must bind to it.
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+
+    plan: free                # free tier is fine for a demo/hackathon
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: LOG_LEVEL
+        value: info
+      # CORS_ORIGINS must include the exact frontend URL.
+      # After deploying the frontend, Render gives it a URL like:
+      #   https://routepulse-frontend.onrender.com
+      # Paste that URL here (no trailing slash).
+      # You can also use a wildcard during development: https://*.onrender.com
+      - key: CORS_ORIGINS
+        value: https://routepulse-frontend.onrender.com
+      - key: RANDOM_SEED
+        value: "42"
+
+  # ---------------------------------------------------------------------------
+  # Frontend — Static Site (Vite build)
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: routepulse-frontend
+    runtime: static
+    rootDir: frontend         # Render runs everything from this subdirectory
+
+    buildCommand: npm install && npm run build
+
+    staticPublishPath: dist   # Vite outputs here
+
+    plan: free
+
+    # SPA routing: all paths serve index.html so React handles navigation
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+    envVars:
+      # This is the backend service URL Render assigns.
+      # After your first deploy, replace the placeholder below with the
+      # actual URL shown on the backend service's dashboard.
+      # Format: https://routepulse-backend.onrender.com/api
+      - key: VITE_API_URL
+        value: https://routepulse-backend.onrender.com/api
